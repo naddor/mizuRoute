@@ -10,13 +10,13 @@
 # User configure part
 #========================================================================
 # Define fortran compiler - gnu, intel or pgi
-FC  =
+FC = intel
 
 # Define the compiler exe, e.g., gnu=>gfortran, intel=>intel, pgi=>pgf90
-FC_EXE =
+FC_EXE = ifort
 
 # Define the compiled executable
-EXE =
+EXE = mizu.exe
 
 # Define optional setting
 # fast:      Enables optimizations
@@ -25,19 +25,19 @@ EXE =
 MODE = debug
 
 # define open MP option (put yes to activate OMP)
-isOpenMP =
+isOpenMP = no
 
 # Define core directory below which everything resides
 # parent directory of the 'build' directory
 # do not put space at the end of path
-F_MASTER =
+F_MASTER = /gpfs/ts0/home/na491/mizuRoute/route/
 
 # Define the NetCDF libraries and path to include files
 ifeq "$(FC)" "gnu"
  NCDF_PATH =
 endif
 ifeq "$(FC)" "intel"
- NCDF_PATH =
+ NCDF_PATH = /gpfs/ts0/shared/software/netCDF-Fortran/4.4.4-intel-2017a
 endif
 ifeq "$(FC)" "pgi"
  NCDF_PATH =
