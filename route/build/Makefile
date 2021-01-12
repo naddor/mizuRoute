@@ -22,7 +22,7 @@ EXE = mizu.exe
 # fast:      Enables optimizations
 # debug:     Minimum debug options, still
 # profile:   Enables profiling
-MODE = debug
+MODE = fast
 
 # define open MP option (put yes to activate OMP)
 isOpenMP = no

@@ -161,12 +161,16 @@ contains
  if(ierr/=0)then; message=trim(message)//trim(cmessage); return; endif
 
  ! get the time units
+ print *, 'Get units'
  call get_var_attr_char(fname, trim(vname_time), 'units', timeUnits, ierr, cmessage)
  if(ierr/=0)then; message=trim(message)//trim(cmessage); return; endif
 
  ! get the calendar
+ print *, 'Get calendar'
  call get_var_attr_char(fname, trim(vname_time), 'calendar', calendar, ierr, cmessage)
  if(ierr/=0)then; message=trim(message)//trim(cmessage); return; endif
+
+ print *, 'Done'
 
  ! get size of ylat dimension
  call get_nc_dim_len(fname, trim(dname_ylat), runoff_data_in%nSpace(1), ierr, cmessage)
