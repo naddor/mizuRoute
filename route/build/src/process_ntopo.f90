@@ -11,6 +11,7 @@ USE dataTypes, only : var_dlength,dlength ! double precision type: var(:)%dat, o
 USE public_var, only : idSegOut           ! ID for stream segment at the bottom of the subset
 
 ! options
+USE public_var, only : qtakeOption        ! option to compute network topology
 USE public_var, only : topoNetworkOption  ! option to compute network topology
 USE public_var, only : computeReachList   ! option to compute reach list
 USE public_var, only : hydGeometryOption  ! option to obtain routing parameters
@@ -20,7 +21,7 @@ USE public_var, only : kinematicWave      ! option for routing methods - kinemat
 USE public_var, only : impulseResponseFunc! option for routing methods - IRF only
 
 ! named variables
-USE globalData, only : true,false         ! named integers for true/false
+USE public_var, only : true,false         ! named integers for true/false
 
 ! named variables
 USE var_lookup,only:ixSEG                 ! index of variables for the stream segments
@@ -230,6 +231,15 @@ contains
  !print*, trim(message)//'PAUSE : '; read(*,*)
 
  ! ---------- Compute routing parameters  --------------------------------------------------------------------
+ do iSeg=1,nSeg
+   structSEG(iSeg)%var(ixSEG%minFlow)%dat(1) = 1.e-15_dp  ! Minimum environmental flow
+ end do
+
+ if(.not.qtakeOption)then
+  do iSeg=1,nSeg
+   structSEG(iSeg)%var(ixSEG%Qtake)%dat(1) = 0._dp  ! no abstraction/injection
+  end do
+ end if
 
  ! compute hydraulic geometry (width and Manning's "n")
  if(hydGeometryOption==compute)then
@@ -346,7 +356,7 @@ end subroutine augment_ntopo
   character(*)                , intent(out)      :: message          ! error message
   ! local varialbles
   integer(i4b)                                   :: nSeg,nHru        ! number of stream reaches and HRUs
-  integer(i4b)                                   :: iSeg,iHru        ! loop indices
+  integer(i4b)                                   :: iSeg             ! loop indices
   logical(lgt)                                   :: verbose = .false.
 
   ! initialize error control
@@ -442,7 +452,10 @@ end subroutine augment_ntopo
    RPARAM_in(iSeg)%UPSAREA = structSEG(iSeg)%var(ixSEG%upsArea)%dat(1)
    RPARAM_in(iSeg)%TOTAREA = structSEG(iSeg)%var(ixSEG%totalArea)%dat(1)
 
-   ! NOT USED: MINFLOW -- minimum environmental flow
+   ! Abstraction/Injection coefficient
+   RPARAM_in(iSeg)%QTAKE   = structSEG(iSeg)%var(ixSEG%Qtake)%dat(1)
+
+   ! MINFLOW -- minimum environmental flow
    RPARAM_in(iSeg)%MINFLOW = structSEG(iSeg)%var(ixSEG%minFlow)%dat(1)
 
    ! ----- network topology -----

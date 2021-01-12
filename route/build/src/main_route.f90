@@ -12,8 +12,6 @@ USE basinUH_module,      only : IRF_route_basin             ! perform UH convolu
 USE accum_runoff_module, only : accum_runoff                ! upstream flow accumulation
 USE kwt_route_module,    only : kwt_route                  ! kinematic wave routing method
 USE irf_route_module,    only : irf_route                  ! unit hydrograph (impulse response function) routing method
-!USE kwt_route_module,    only : kwt_route => kwt_route_orig ! kinematic wave routing method
-!USE irf_route_module,    only : irf_route => irf_route_orig ! river network unit hydrograph method
 
 implicit none
 
@@ -153,6 +151,7 @@ contains
                    river_basin,         & ! input: river basin data type
                    ixPrint,             & ! input: index of the desired reach
                    NETOPO,              & ! input: reach topology data structure
+                   RPARAM,              & ! input: reach parameter data structure
                    RCHFLX,              & ! inout: reach flux data structure
                    ierr,cmessage)         ! output: error control
     if(ierr/=0)then; message=trim(message)//trim(cmessage); return; endif

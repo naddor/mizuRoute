@@ -9,18 +9,19 @@ program route_runoff
 ! ****************************************************
 ! variable types
 USE nrtype                                       ! variable types, etc.
-USE globalData,          only : nThreads         ! a number of threads
 ! subroutines: model set up
 USE model_setup,         only : init_model       ! model setupt - reading control file, populate metadata, read parameter file
 USE model_setup,         only : init_data        ! initialize river reach data
 USE model_setup,         only : update_time      ! Update simulation time information at each time step
 ! subroutines: routing
-USE main_route_module,   only : main_route       !
+USE main_route_module,   only : main_route       ! main routing routine
 ! subroutines: model I/O
 USE get_runoff        ,  only : get_hru_runoff   !
 USE write_simoutput,     only : prep_output      !
 USE write_simoutput,     only : output           !
-USE write_restart,       only : output_state     ! write netcdf state output file
+USE write_restart,       only : main_restart     ! write netcdf restart file
+USE model_finalize,      ONLY : finalize
+USE model_finalize,      ONLY : handle_err
 
 implicit none
 
@@ -32,7 +33,6 @@ integer(i4b)                  :: ierr                ! error code
 character(len=strLen)         :: cmessage            ! error message of downwind routine
 integer(i4b)                  :: iens = 1
 logical(lgt)                  :: finished=.false.
-integer(i4b)                  :: omp_get_num_threads ! number of threads used for openMP
 !Timing
 integer*8                     :: cr, startTime, endTime
 real(dp)                      :: elapsedTime
@@ -46,12 +46,6 @@ call system_clock(count_rate=cr)
 ! ***********************************
  call getarg(1,cfile_name)
  if(len_trim(cfile_name)==0) call handle_err(50,'need to supply name of the control file as a command-line argument')
-
-!  Get number of threads
-nThreads = 1
-!$OMP PARALLEL
-!$ nThreads = omp_get_num_threads()
-!$OMP END PARALLEL
 
 ! *****
 ! *** model setup
@@ -76,11 +70,9 @@ if(ierr/=0) call handle_err(ierr, cmessage)
 ! ***********************************
 do while (.not.finished)
 
-  ! prepare simulation output netCDF
   call prep_output(ierr, cmessage)
   if(ierr/=0) call handle_err(ierr, cmessage)
 
-  ! Get river network hru runoff at current time step
 call system_clock(startTime)
   call get_hru_runoff(ierr, cmessage)
   if(ierr/=0) call handle_err(ierr, cmessage)
@@ -102,29 +94,14 @@ call system_clock(endTime)
 elapsedTime = real(endTime-startTime, kind(dp))/real(cr)
 write(*,"(A,1PG15.7,A)") '   elapsed-time [output] = ', elapsedTime, ' s'
 
+  call main_restart(ierr, cmessage)
+  if(ierr/=0) call handle_err(ierr, cmessage)
+
   call update_time(finished, ierr, cmessage)
   if(ierr/=0) call handle_err(ierr, cmessage)
 
-end do  ! looping through time
+end do
 
-! write state netCDF
-call output_state(ierr, cmessage)
-if(ierr/=0) call handle_err(ierr, cmessage)
-
-stop
-
-contains
-
- subroutine handle_err(err,message)
- ! handle error codes
- implicit none
- integer(i4b),intent(in)::err             ! error code
- character(*),intent(in)::message         ! error message
- if(err/=0)then
-  print*,'FATAL ERROR: '//trim(message)
-  call flush(6)
-  stop
- endif
- end subroutine handle_err
+call finalize()
 
 end program route_runoff

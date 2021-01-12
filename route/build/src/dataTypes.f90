@@ -1,10 +1,13 @@
 module dataTypes
-USE nrtype,     only: i4b,dp,lgt
-USE nrtype,     only: strLen   ! string length
+
+! used to create/save specific data types
+
+USE nrtype,     only: i4b,i8b,dp,lgt
+USE nrtype,     only: strLen
 USE public_var, only: realMissing
 USE public_var, only: integerMissing
-! used to create specific data types
-! --
+USE public_var, only: charMissing
+
 implicit none
 
  ! everything private unless specified otherwise
@@ -31,24 +34,13 @@ implicit none
 
  ! ---------- metadata structures --------------------------------------------------------------------------
 
- ! define derived type for model variables, including name, description, and units
- type,public :: var_info
-  character(len=strLen)  :: varName  = 'empty'         ! variable name
-  character(len=strLen)  :: varDesc  = 'empty'         ! variable description
-  character(len=strLen)  :: varUnit  = 'empty'         ! variable units
-  integer(i4b)           :: varType  = integerMissing  ! variable type (vectors of different size)
-  logical(lgt)           :: varFile  = .true.          ! .true. if the variable should be read from a file
- endtype var_info
-
- ! ---------- time structures ------------------------------------------------------------------------------
- type,public :: time
-  integer(i4b)           :: iy       = integerMissing  ! year
-  integer(i4b)           :: im       = integerMissing  ! month
-  integer(i4b)           :: id       = integerMissing  ! day
-  integer(i4b)           :: ih       = integerMissing  ! hour
-  integer(i4b)           :: imin     = integerMissing  ! minute
-  real(dp)               :: dsec     = realMissing     ! second
- endtype time
+ type, public :: var_info
+   character(len=strLen)    :: varName  = 'empty'         ! variable name
+   character(len=strLen)    :: varDesc  = 'empty'         ! variable description
+   character(len=strLen)    :: varUnit  = 'empty'         ! variable units
+   integer(i4b)             :: varType  = integerMissing  ! variable type (vectors of different size)
+   logical(lgt)             :: varFile  = .true.          ! .true. if the variable should be read from a file
+ end type var_info
 
  ! ---------- states structure --------------------------------------------------------------------------
  !
@@ -64,6 +56,14 @@ implicit none
  type,public :: states
   type(var),     allocatable :: var(:)
  end type states
+
+ ! ---------- output netcdf structure --------------------------------------------------------------------------
+ !
+ type,public :: nc
+   character(len=strLen)   :: ncname = charMissing     ! netcdf name
+   integer(i4b)            :: ncid   = integerMissing  ! netcdf id
+   integer(i4b)            :: status = integerMissing  ! status: 1=defined, 2=open, 3=closed
+ end type nc
 
  ! ---------- basin data structures ----------------------------------------------------------------------
  ! segIndex points to the segment in the entire river network data
@@ -135,8 +135,8 @@ end type subdomain
  ! data to remap runoff hru to river network hrus
  type, public :: remap
    ! information in the mapping file
-   integer(i4b)             , allocatable  :: hru_id(:)    ! Id of hrus associated with river network (="hru")
-   integer(i4b)             , allocatable  :: qhru_id(:)   ! Id of hrus associated with runoff simulation (="qhru")
+   integer(i8b)             , allocatable  :: hru_id(:)    ! Id of hrus associated with river network (="hru")
+   integer(i8b)             , allocatable  :: qhru_id(:)   ! Id of hrus associated with runoff simulation (="qhru")
    integer(i4b)             , allocatable  :: num_qhru(:)  ! number of "qhru" within "hru"
    integer(i4b)             , allocatable  :: i_index(:)   ! Index in the y dimension of the runoff grid (starting with 1,1 in LL corner)
    integer(i4b)             , allocatable  :: j_index(:)   ! Index in the x dimension of the runoff grid (starting with 1,1 in LL corner)
@@ -153,7 +153,7 @@ end type subdomain
    real(dp)                                :: time          ! time variable at one time step
    real(dp)                 , allocatable  :: qsim(:)       ! runoff(HM_HRU) at one time step (size: nSpace(1))
    real(dp)                 , allocatable  :: qsim2D(:,:)   ! runoff(x,y) at one time step (size: /nSpace(1),nSpace(2)/)
-   integer(i4b)             , allocatable  :: hru_id(:)     ! id of HM_HRUs or RN_HRUs at which runoff is stored (size: nSpace(1))
+   integer(i8b)             , allocatable  :: hru_id(:)     ! id of HM_HRUs or RN_HRUs at which runoff is stored (size: nSpace(1))
    integer(i4b)             , allocatable  :: hru_ix(:)     ! Index of RN_HRUs associated with river network (used only if HM_HRUs = RN_HRUs)
    real(dp)                 , allocatable  :: basinRunoff(:)! remapped river network catchment runoff (size: number of nHRU)
  end type runoff
@@ -169,6 +169,7 @@ end type subdomain
   real(DP)                                :: UPSAREA  ! upstream area (zero if headwater basin)
   real(DP)                                :: BASAREA  ! local basin area
   real(DP)                                :: TOTAREA  ! UPSAREA + BASAREA
+  real(DP)                                :: QTAKE    ! target abstraction/injection [m3/s]
   real(DP)                                :: MINFLOW  ! minimum environmental flow
  end type RCHPRP
 
@@ -233,11 +234,11 @@ end type subdomain
   REAL(DP), allocatable                :: QFUTURE_IRF(:)    ! runoff volume in future time steps for IRF routing (m3/s)
   REAL(DP)                             :: BASIN_QI          ! instantaneous runoff volume from the local basin (m3/s)
   REAL(DP)                             :: BASIN_QR(0:1)     ! routed runoff volume from the local basin (m3/s)
-  REAL(DP)                             :: UPSBASIN_QR       ! routed runoff depth from the upstream basins (m/s)
   REAL(DP)                             :: BASIN_QR_IRF(0:1) ! routed runoff volume from all the upstream basin (m3/s)
   REAL(DP)                             :: REACH_Q           ! time-step average streamflow (m3/s)
   REAL(DP)                             :: REACH_Q_IRF       ! time-step average streamflow (m3/s) from IRF routing
   REAL(DP)                             :: UPSTREAM_QI       ! sum of upstream streamflow (m3/s)
+  REAL(DP)                             :: REACH_VOL(0:1)    ! volume of water at a reach [m3]
   REAL(DP)                             :: TAKE              ! average take
   logical(lgt)                         :: CHECK_IRF         ! .true. if the reach is routed
  ENDTYPE STRFLX
@@ -283,4 +284,49 @@ end type subdomain
   REAL(DP)                             :: LAKE_I            ! inflow to lake (m3 s-1)
  ENDTYPE LKFLX
 
-end module dataTypes
+END MODULE dataTypes
+
+MODULE objTypes
+
+ USE nrtype,     ONLY: i4b,dp,lgt
+ USE nrtype,     ONLY: strLen
+ USE public_var, ONLY: realMissing
+ USE public_var, ONLY: integerMissing
+ USE public_var, ONLY: charMissing
+
+ ! define derived type for model variables, including name, description, and units
+ type, public :: meta_var
+   character(len=strLen)    :: varName  = charMissing     ! variable name
+   character(len=strLen)    :: varDesc  = charMissing     ! variable description
+   character(len=strLen)    :: varUnit  = charMissing     ! variable units
+   integer(i4b)             :: varType  = integerMissing  ! variable type
+   integer(i4b),allocatable :: varDim(:)                  ! dimension ID associated with variable
+   logical(lgt)             :: varFile  = .true.          ! .true. if the variable should be read from a file
+ CONTAINS
+   procedure, pass :: init
+ end type meta_var
+
+ CONTAINS
+
+  SUBROUTINE init(this, vName, vDesc, vUnit, vType, vDim, vFile)
+    implicit none
+    class(meta_var)                 :: this
+    character(*),            intent(in) :: vName    ! variable name
+    character(*),            intent(in) :: vDesc    ! variable description
+    character(*),            intent(in) :: vUnit    ! variable units
+    integer(i4b),            intent(in) :: vType    ! variable type
+    integer(i4b),            intent(in) :: vDim(:)  ! dimension ID
+    logical(lgt),            intent(in) :: vFile    ! .true. if the variable should be read from a file
+    integer(i4b)                        :: n        ! size of dimension
+
+    n = size(vDim)
+    allocate(this%varDim(n))
+    this%varName      = vName
+    this%varDesc      = vDesc
+    this%varUnit      = vUnit
+    this%varType      = vType
+    this%varDim(1:n)  = vDim(1:n)
+    this%varFile      = vFile
+  END SUBROUTINE init
+
+END MODULE objTypes

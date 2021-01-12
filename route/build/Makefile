@@ -53,7 +53,15 @@ INCNETCDF = -I$(NCDF_PATH)/include
 FLAGS_OMP =
 LIBOPENMP =
 ifeq "$(isOpenMP)" "yes"
- FLAGS_OMP = -fopenmp
+ ifeq "$(FC)" "pgi"
+  FLAGS_OMP = -mp
+ endif
+ ifeq "$(FC)" "gnu"
+  FLAGS_OMP = -fopenmp
+ endif
+ ifeq "$(FC)" "intel"
+  FLAGS_OMP = -qopenmp
+ endif
 endif
 
 ifeq "$(FC)" "gnu"
@@ -112,6 +120,8 @@ DATATYPES = \
     public_var.f90 \
     dataTypes.f90 \
     var_lookup.f90 \
+    time_utils.f90 \
+    datetime_data.f90 \
     globalData.f90 \
     popMetadat.f90 \
     allocation.f90
@@ -119,9 +129,15 @@ DATATYPES = \
 UTILS = \
     nr_utility.f90 \
     ascii_util.f90 \
-    time_utils.f90 \
     ncio_utils.f90 \
     gamma_func.f90
+# initialization
+INIT = \
+    network_topo.f90 \
+    process_param.f90 \
+    process_ntopo.f90 \
+    pfafstetter.f90 \
+    domain_decomposition.f90
 # read/write files
 IO = \
     remap.f90 \
@@ -135,16 +151,9 @@ IO = \
     read_restart.f90 \
     write_restart.f90 \
     write_simoutput.f90
-# initialization
-INIT = \
-    process_time.f90 \
-    network_topo.f90 \
-    process_param.f90 \
-    process_ntopo.f90 \
-    pfafstetter.f90 \
-    domain_decomposition.f90
 # CORE
 CORE = \
+    model_finalize.f90 \
     accum_runoff.f90 \
     basinUH.f90 \
     irf_route.f90 \
@@ -153,7 +162,7 @@ CORE = \
     model_setup.f90
 
 # concatanate model subroutines
-TEMP_MODSUB = $(DATATYPES) $(UTILS) $(IO) $(INIT) $(CORE)
+TEMP_MODSUB = $(DATATYPES) $(UTILS) $(INIT) $(IO) $(CORE)
 
 # insert appropriate directory name
 MODSUB = $(patsubst %, $(F_KORE_DIR)%, $(TEMP_MODSUB))

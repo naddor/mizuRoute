@@ -61,7 +61,6 @@ contains
                     structPFAF,   & ! ancillary data for pfafstetter code
                     ! output: error control
                     ierr,message)   ! output: error control
-
  implicit none
  ! input variables
  character(*)      , intent(in)               :: fname            ! filename
@@ -143,6 +142,10 @@ contains
  ! -----------------------------------------------------------------------------------------------------------------
  ! ---------- read in data -----------------------------------------------------------------------------------------
  ! -----------------------------------------------------------------------------------------------------------------
+ ! set flags if we want to turn on abstraction/injection option (require Qtake in network data)
+ if(qtakeOption)then
+  meta_SEG(ixSEG%Qtake)%varFile = .true.
+ endif
 
  ! set flags if we want to read hdraulic geometry from file
  if(hydGeometryOption==readFromFile)then
@@ -151,6 +154,7 @@ contains
  endif
 
  ! loop through data structures
+ write(iulog,'(2a)') new_line('a'), '---- Read river network data --- '
  do iStruct=1,nStructures
 
   ! loop through the variables
@@ -195,7 +199,7 @@ contains
    ! ---------- read data into temporary structures ----------------------------------------------------------------
 
    ! print progress
-   print*, 'Reading '//trim(varName)//' into structure '//trim(meta_struct(iStruct)%structName)
+   write(iulog,'(2x,a)') 'Reading '//trim(varName)//' into structure '//trim(meta_struct(iStruct)%structName)
 
    ! read data from NetCDF files
    select case(iStruct)
